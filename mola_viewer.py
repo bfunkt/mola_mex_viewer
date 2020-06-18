@@ -27,6 +27,21 @@ def run(lat_top=-37.5, lat_bottom=-38.25, long_west=87.5, long_east=88.25, filen
         else:
             continue
 
+    data_coord = np.array(data_coord)
+    data_value = np.array(data_value)
+
+    plt = pg.plot()
+    plt.resize(1000, 1000)
+    dmin, dmax = data_value.min(), data_value.max()
+    cmap = pg.ColorMap(
+        pos=np.linspace(dmin, dmax, 4),
+        color=np.array([[0, 0, 0], [255, 0, 0], [255, 255, 0], [255, 255, 255]])
+    )
+
+    colors = [pg.mkBrush(cmap.map(x)) for x in data_value]
+    scatter = plt.plot(data_coord[:,0], data_coord[:,1], symbolBrush=colors, symbolPen=0.3, pen=None, symbol='o', symbolSize=3)
+
+
     x_bounds = min(long_west, long_east), max(long_west, long_east)
     y_bounds = lat_bottom, lat_top
 
@@ -43,8 +58,23 @@ def run(lat_top=-37.5, lat_bottom=-38.25, long_west=87.5, long_east=88.25, filen
     interp = LinearNDInterpolator(data_coord, data_value)
     image = interp(img_coords)    
 
-    if __name__ == '__main__':
-        pg.image(image)
+    img = pg.ImageItem(image.T)
+    plt.addItem(img)
+    brect = pg.QtCore.QRectF(x_bounds[0], y_bounds[0], x_bounds[1]-x_bounds[0], y_bounds[1]-y_bounds[0])
+    img.setRect(brect)
+    img.setZValue(-10)
+
+    label = pg.TextItem()
+    label.setParentItem(plt.plotItem.vb)
+
+    def mouseHover(pos):
+        pos = plt.plotItem.vb.mapSceneToView(pos)
+        label.setText('%0.2f %0.2f %0.2f' % (pos.x(), pos.y(), interp([pos.x(), pos.y()])))
+
+    plt.scene().sigMouseMoved.connect(mouseHover)
+
+    # if __name__ == '__main__':
+    #     pg.image(image)
 
 
 class Pixel:
